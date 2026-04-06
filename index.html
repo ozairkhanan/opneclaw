@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OpenClaw — Revenue Agent</title>
+<style>
+:root {
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8e6df;--muted:#6b6b67;--muted2:#9a9994;
+  --green:#1adb8f;--green-dim:#0d7a50;--green-bg:rgba(26,219,143,0.08);
+  --red:#ff5c5c;--red-bg:rgba(255,92,92,0.08);
+  --amber:#ffb340;--amber-bg:rgba(255,179,64,0.08);
+  --blue:#4d9fff;--blue-bg:rgba(77,159,255,0.08);
+  --admob:#ea4335;--admob-bg:rgba(234,67,53,0.10);
+  --mint:#00d68f;--mint-bg:rgba(0,214,143,0.10);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.10);
+  --radius:10px;--radius-sm:6px;
+  --font-mono:'JetBrains Mono','Fira Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* Login Screen */
+#login-screen {
+  position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;
+}
+.login-card {
+  width:360px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:30px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+}
+.login-header { text-align:center;margin-bottom:24px; }
+.login-logo { font-size:40px;margin-bottom:10px; }
+.login-title { font-size:20px;font-weight:600;letter-spacing:-0.02em; }
+.login-error { color:var(--red);font-size:12px;margin-bottom:10px;text-align:center;display:none; }
+
+/* Shell */
+.shell{display:none;height:100vh;overflow:hidden}
+.sidebar{width:210px;background:var(--surface);border-right:0.5px solid var(--border);padding:0;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
+.main{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* Sidebar */
+.logo{padding:18px 16px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#1adb8f22,#4d9fff22);border:0.5px solid var(--green-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.logo-text{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:1px}
+
+.nav-group{padding:10px 0 4px}
+.nav-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:0 16px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;font-size:12.5px;color:var(--muted2);transition:all .12s;border-left:2px solid transparent;margin:1px 0}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--green);background:var(--green-bg);border-left-color:var(--green);font-weight:500}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0}
+.nav-item.active .nav-dot{opacity:1}
+.nav-status{margin-left:auto;font-size:9px;padding:2px 5px;border-radius:3px}
+.ns-live{background:var(--green-bg);color:var(--green)}
+.ns-setup{background:var(--amber-bg);color:var(--amber)}
+
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:0.5px solid var(--border);font-size:11px;color:var(--muted)}
+.proxy-status{display:flex;align-items:center;gap:6px;margin-top:4px}
+.proxy-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.proxy-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* Page header */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:18px;font-weight:600;letter-spacing:-.02em}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+
+/* Buttons */
+.btn{padding:7px 13px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12.5px;cursor:pointer;transition:all .12s;font-family:inherit}
+.btn:hover{background:var(--surface3);border-color:rgba(255,255,255,.2)}
+.btn-green{background:var(--green-bg);color:var(--green);border-color:var(--green-dim)}
+.btn-green:hover{background:rgba(26,219,143,.15)}
+.btn-red{background:var(--red-bg);color:var(--red);border-color:rgba(255,92,92,.3)}
+
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-source{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.stat-source-dot{width:5px;height:5px;border-radius:50%}
+.stat-value{font-size:21px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-delta{font-size:11px;margin-top:5px;padding:2px 6px;border-radius:3px;display:inline-block}
+.delta-up{background:var(--green-bg);color:var(--green)}
+.delta-down{background:var(--red-bg);color:var(--red)}
+.delta-neutral{background:var(--surface3);color:var(--muted2)}
+
+/* Panel */
+.panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel-title{font-size:13px;font-weight:500}
+.panel-tag{font-size:10px;padding:2px 7px;border-radius:3px;letter-spacing:.04em}
+.tag-admob{background:var(--admob-bg);color:var(--admob)}
+.tag-mint{background:var(--mint-bg);color:var(--mint)}
+.tag-green{background:var(--green-bg);color:var(--green)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em;padding:0 8px 8px;border-bottom:0.5px solid var(--border)}
+td{padding:9px 8px;border-bottom:0.5px solid var(--border);vertical-align:middle;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:500}
+.b-muted{background:var(--surface3);color:var(--muted2)}
+
+/* Two-col */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+
+/* Credentials form */
+.creds-panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+.creds-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.creds-sub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:var(--muted);font-weight:500}
+.field input{background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-size:12.5px;color:var(--text);outline:none;font-family:var(--font-mono);transition:border .12s}
+.field input:focus{border-color:var(--green-dim)}
+.field input::placeholder{color:var(--muted);font-family:inherit}
+.field-full{grid-column:1/-1}
+
+/* Log */
+.log-box{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--font-mono);font-size:11px;color:var(--muted2);max-height:130px;overflow-y:auto;line-height:1.8}
+.log-ok{color:var(--green)}
+.log-err{color:var(--red)}
+.log-info{color:var(--blue)}
+
+/* Empty state */
+.empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px}
+.empty-icon{font-size:28px;margin-bottom:8px}
+
+.nav-item#logout-btn { color: var(--red); opacity: 0.7; }
+.nav-item#logout-btn:hover { opacity: 1; background: var(--red-bg); }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">🦞</div>
+      <div class="login-title">OpenClaw Login</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Enter your admin credentials</div>
+    </div>
+    <div id="login-error" class="login-error">Invalid email or password</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="admin@openclaw.com" value="admin@openclaw.com"/>
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" value="admin123"/>
+    </div>
+    <button class="btn btn-green" style="width:100%;padding:10px" onclick="login()">Sign In ↗</button>
+  </div>
+</div>
+
+<div class="shell" id="app-shell">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">🦞</div>
+      <div>
+        <div class="logo-text">OpenClaw</div>
+        <div class="logo-sub">Revenue Agent</div>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active" onclick="showTab('dashboard',this)"><div class="nav-dot"></div>Dashboard</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">API Tools</div>
+      <div class="nav-item" onclick="showTab('admob',this)"><div class="nav-dot"></div>AdMob</div>
+      <div class="nav-item" onclick="showTab('mintegral',this)"><div class="nav-dot"></div>Mintegral</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">System</div>
+      <div class="nav-item" id="logout-btn" onclick="logout()"><div class="nav-dot"></div>Logout</div>
+    </div>
+    <div class="sidebar-footer">
+      <div style="color:var(--muted2)">Backend status</div>
+      <div class="proxy-status">
+        <div class="proxy-dot" id="proxy-dot"></div>
+        <span id="proxy-label" style="font-size:11px">Checking...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Revenue Dashboard</div><div class="page-sub" id="dash-sub">Live revenue and spend data</div></div>
+        <div class="hdr-actions">
+          <button class="btn btn-green" onclick="refreshAll()">⟳ Refresh</button>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-source"><div class="stat-source-dot" style="background:var(--admob)"></div>ADMOB</div>
+          <div class="stat-value" id="sv-admob-rev">—</div>
+          <div class="stat-label">Estimated Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-source"><div class="stat-source-dot" style="background:var(--mint)"></div>MINTEGRAL</div>
+          <div class="stat-value" id="sv-mint-rev">—</div>
+          <div class="stat-label">UA Spend</div>
+        </div>
+      </div>
+      <div id="dashboard-content" class="empty">Click refresh to pull data</div>
+    </div>
+
+    <!-- ADMOB TAB -->
+    <div id="tab-admob" style="display:none">
+       <div class="page-header">
+         <div><div class="page-title">AdMob Report</div><div class="page-sub">Requires OAuth2 Authorization</div></div>
+         <button class="btn btn-green" onclick="fetchAdMobReport()">Pull Report</button>
+       </div>
+       <div class="creds-panel">
+         <div class="creds-title">Google OAuth2 Setup</div>
+         <button class="btn btn-green" onclick="getAdMobAuthUrl()">Step 1: Get Login URL ↗</button>
+         <div id="admob-auth-url-box" style="display:none;margin-top:10px">
+           <div class="field"><label>Step 2: Paste Auth Code</label><input id="admob-auth-code" style="margin-top:5px" placeholder="Paste code here"/></div>
+           <button class="btn btn-green" style="margin-top:8px" onclick="exchangeAdMobCode()">Step 3: Exchange Code</button>
+         </div>
+       </div>
+       <div class="log-box" id="admob-log">Ready.</div>
+    </div>
+
+    <!-- MINTEGRAL TAB -->
+    <div id="tab-mintegral" style="display:none">
+       <div class="page-header">
+         <div><div class="page-title">Mintegral UA</div><div class="page-sub">Advertiser performance reports</div></div>
+         <button class="btn btn-green" onclick="fetchMintegralReport()">Pull Report</button>
+       </div>
+       <div class="log-box" id="mint-log">Ready. Configure keys in Settings.</div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+const BASE_URL = 'http://localhost:3747';
+const S = {
+  token: localStorage.getItem('oclaw_token'),
+  email: localStorage.getItem('oclaw_email'),
+  admob: {},
+  mint: {}
+};
+
+async function api(path, options = {}) {
+  const url = `${BASE_URL}${path}`;
+  options.headers = {
+    ...options.headers,
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${S.token}`
+  };
+  const r = await fetch(url, options);
+  if (r.status === 401) { logout(); throw new Error('Unauthorized'); }
+  return r.json();
+}
+
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+
+  try {
+    const r = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const d = await r.json();
+    if (d.token) {
+      S.token = d.token;
+      S.email = d.email;
+      localStorage.setItem('oclaw_token', d.token);
+      localStorage.setItem('oclaw_email', d.email);
+      initApp();
+    } else {
+      err.style.display = 'block';
+    }
+  } catch (e) { err.textContent = 'Server unreachable'; err.style.display = 'block'; }
+}
+
+function logout() {
+  localStorage.removeItem('oclaw_token');
+  localStorage.removeItem('oclaw_email');
+  location.reload();
+}
+
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'flex';
+  checkProxy();
+}
+
+
+async function checkProxy() {
+  const dot = document.getElementById('proxy-dot');
+  const label = document.getElementById('proxy-label');
+  try {
+    const r = await fetch(`${BASE_URL}/`);
+    if (r.ok) { dot.classList.add('live'); label.textContent = 'Online'; }
+  } catch { dot.classList.remove('live'); label.textContent = 'Offline'; }
+}
+
+function showTab(id, el) {
+  ['dashboard','admob','mintegral'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = 'none';
+  });
+  document.getElementById('tab-'+id).style.display = '';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+// Reporting logic (simplified for demonstration, similar to original but using api() wrapper)
+async function fetchMintegralReport() {
+  const box = document.getElementById('mint-log');
+  box.innerHTML += `<div>[${new Date().toLocaleTimeString()}] Pulling report...</div>`;
+  try {
+    const data = await api('/mintegral/report');
+    box.innerHTML += `<div class="log-ok">✓ Success: Got ${data.length || 0} rows</div>`;
+    document.getElementById('sv-mint-rev').textContent = '$' + (data.reduce((s,r)=>s+(r.cost||0),0)).toFixed(2);
+  } catch (e) { box.innerHTML += `<div class="log-err">Error: ${e.message}</div>`; }
+}
+
+async function getAdMobAuthUrl() {
+  try {
+    const d = await api('/admob/auth-url');
+    if (d.authUrl) { 
+      document.getElementById('admob-auth-url-box').style.display = 'block';
+      window.open(d.authUrl, '_blank');
+    }
+  } catch (e) { alert('Error getting auth URL'); }
+}
+
+async function exchangeAdMobCode() {
+  const code = document.getElementById('admob-auth-code').value;
+  try {
+    const d = await api('/admob/token-exchange', { method: 'POST', body: JSON.stringify({ code }) });
+    if (d.access_token) {
+      localStorage.setItem('admob_access_token', d.access_token);
+      document.getElementById('admob-log').innerHTML += `<div class="log-ok">✓ AdMob Connected</div>`;
+    }
+  } catch (e) { alert('Exchange failed'); }
+}
+
+async function fetchAdMobReport() {
+  const accessToken = localStorage.getItem('admob_access_token');
+  if (!accessToken) return alert('Connect AdMob first');
+  try {
+    const data = await api('/admob/report', { method: 'POST', body: JSON.stringify({ accessToken }) });
+    const rows = data.filter(x => x.row);
+    const total = rows.reduce((s,r) => s + parseFloat(r.row.metricValues.ESTIMATED_EARNINGS.decimal_value || 0), 0);
+    document.getElementById('sv-admob-rev').textContent = '$' + total.toFixed(2);
+    document.getElementById('admob-log').innerHTML += `<div class="log-ok">✓ Got ${rows.length} rows</div>`;
+  } catch (e) { alert('Report failed'); }
+}
+
+function refreshAll() { fetchAdMobReport(); fetchMintegralReport(); }
+
+if (S.token) initApp();
+</script>
+</body>
+</html>
